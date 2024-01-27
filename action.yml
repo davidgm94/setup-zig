@@ -3,7 +3,7 @@ description: 'Setup a Zig compiler and add it to the path'
 branding:
   icon: play
   color: orange
-author: 'goto-bus-stop'
+author: 'davidgm94'
 inputs:
   version:
     description: 'Version of the zig compiler to use (must be 0.3.0 or up)'

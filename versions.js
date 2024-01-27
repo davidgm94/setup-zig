@@ -61,7 +61,7 @@ async function resolveVersion (arch, platform, version) {
     x64: 'x86_64',
   } [arch]
 
-  const host = '${resolvedArch}-${resolvedOs}
+  const host = `${resolvedArch}-${resolvedOs}`
 
   const index = await getJSON({ url: 'https://ziglang.org/download/index.json' })
 

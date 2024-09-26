@@ -26193,18 +26193,18 @@ var require_constants6 = __commonJS({
     (function(CacheFilename2) {
       CacheFilename2["Gzip"] = "cache.tgz";
       CacheFilename2["Zstd"] = "cache.tzst";
-    })(CacheFilename = exports2.CacheFilename || (exports2.CacheFilename = {}));
+    })(CacheFilename || (exports2.CacheFilename = CacheFilename = {}));
     var CompressionMethod;
     (function(CompressionMethod2) {
       CompressionMethod2["Gzip"] = "gzip";
       CompressionMethod2["ZstdWithoutLong"] = "zstd-without-long";
       CompressionMethod2["Zstd"] = "zstd";
-    })(CompressionMethod = exports2.CompressionMethod || (exports2.CompressionMethod = {}));
+    })(CompressionMethod || (exports2.CompressionMethod = CompressionMethod = {}));
     var ArchiveToolType;
     (function(ArchiveToolType2) {
       ArchiveToolType2["GNU"] = "gnu";
       ArchiveToolType2["BSD"] = "bsd";
-    })(ArchiveToolType = exports2.ArchiveToolType || (exports2.ArchiveToolType = {}));
+    })(ArchiveToolType || (exports2.ArchiveToolType = ArchiveToolType = {}));
     exports2.DefaultRetryAttempts = 2;
     exports2.DefaultRetryDelay = 5e3;
     exports2.SocketTimeout = 5e3;
@@ -26355,20 +26355,16 @@ var require_cacheUtils = __commonJS({
           implicitDescendants: false
         });
         try {
-          for (var _e = true, _f = __asyncValues2(globber.globGenerator()), _g; _g = yield _f.next(), _a = _g.done, !_a; ) {
+          for (var _e = true, _f = __asyncValues2(globber.globGenerator()), _g; _g = yield _f.next(), _a = _g.done, !_a; _e = true) {
             _c = _g.value;
             _e = false;
-            try {
-              const file = _c;
-              const relativeFile = path2.relative(workspace, file).replace(new RegExp(`\\${path2.sep}`, "g"), "/");
-              core.debug(`Matched: ${relativeFile}`);
-              if (relativeFile === "") {
-                paths.push(".");
-              } else {
-                paths.push(`${relativeFile}`);
-              }
-            } finally {
-              _e = true;
+            const file = _c;
+            const relativeFile = path2.relative(workspace, file).replace(new RegExp(`\\${path2.sep}`, "g"), "/");
+            core.debug(`Matched: ${relativeFile}`);
+            if (relativeFile === "") {
+              paths.push(".");
+            } else {
+              paths.push(`${relativeFile}`);
             }
           }
         } catch (e_1_1) {
@@ -78456,7 +78452,7 @@ var require_cacheHttpClient = __commonJS({
     }
     __name(createHttpClient, "createHttpClient");
     function getCacheVersion(paths, compressionMethod, enableCrossOsArchive = false) {
-      const components = paths;
+      const components = paths.slice();
       if (compressionMethod) {
         components.push(compressionMethod);
       }
@@ -81526,15 +81522,22 @@ var require_versions = __commonJS({
       }[platform];
     }
     __name(extForPlatform2, "extForPlatform");
-    function resolveCommit2(platform, version3) {
+    function resolveCommit2(arch, platform, version3) {
       const ext = extForPlatform2(platform);
-      const addrhost = {
-        linux: "linux-x86_64",
-        darwin: "macos-x86_64",
-        win32: "windows-x86_64"
+      const resolvedOs = {
+        linux: "linux",
+        darwin: "macos",
+        win32: "windows"
       }[platform];
-      const downloadUrl = `https://ziglang.org/builds/zig-${addrhost}-${version3}.${ext}`;
-      const variantName = `zig-${addrhost}-${version3}`;
+      const resolvedArch = {
+        arm: "armv7a",
+        arm64: "aarch64",
+        ppc64: "powerpc64",
+        riscv64: "riscv64",
+        x64: "x86_64"
+      }[arch];
+      const downloadUrl = `https://ziglang.org/builds/zig-${resolvedOs}-${resolvedArch}-${version3}.${ext}`;
+      const variantName = `zig-${resolvedOs}-${resolvedArch}-${version3}`;
       return { downloadUrl, variantName, version: version3 };
     }
     __name(resolveCommit2, "resolveCommit");
@@ -81550,13 +81553,21 @@ var require_versions = __commonJS({
       });
     }
     __name(getJSON, "getJSON");
-    async function resolveVersion2(platform, version3) {
+    async function resolveVersion2(arch, platform, version3) {
       const ext = extForPlatform2(platform);
-      const host = {
-        linux: "x86_64-linux",
-        darwin: "x86_64-macos",
-        win32: "x86_64-windows"
-      }[platform] || platform;
+      const resolvedOs = {
+        linux: "linux",
+        darwin: "macos",
+        win32: "windows"
+      }[platform];
+      const resolvedArch = {
+        arm: "armv7a",
+        arm64: "aarch64",
+        ppc64: "powerpc64",
+        riscv64: "riscv64",
+        x64: "x86_64"
+      }[arch];
+      const host = `${resolvedArch}-${resolvedOs}`;
       const index = await getJSON({ url: "https://ziglang.org/download/index.json" });
       const availableVersions = Object.keys(index);
       const useVersion = semver2.valid(version3) ? semver2.maxSatisfying(availableVersions.filter((v) => semver2.valid(v)), version3) : null;
@@ -81590,9 +81601,9 @@ var {
   resolveVersion
 } = require_versions();
 var TOOL_NAME = "zig";
-async function downloadZig(platform, version3, useCache = true) {
+async function downloadZig(arch, platform, version3, useCache = true) {
   const ext = extForPlatform(platform);
-  const { downloadUrl, variantName, version: useVersion } = version3.includes("+") ? resolveCommit(platform, version3) : await resolveVersion(platform, version3);
+  const { downloadUrl, variantName, version: useVersion } = version3.includes("+") ? resolveCommit(arch, platform, version3) : await resolveVersion(arch, platform, version3);
   const cachedPath = toolCache.find(TOOL_NAME, useVersion);
   if (cachedPath) {
     actions.info(`using cached zig install: ${cachedPath}`);
@@ -81600,7 +81611,7 @@ async function downloadZig(platform, version3, useCache = true) {
   }
   const cacheKey = `${TOOL_NAME}-${variantName}`;
   if (useCache) {
-    const restorePath = path.join(process.env.RUNNER_TOOL_CACHE, TOOL_NAME, useVersion, os.arch());
+    const restorePath = path.join(process.env.RUNNER_TOOL_CACHE, TOOL_NAME, useVersion, arch);
     actions.info(`attempting restore of ${cacheKey} to ${restorePath}`);
     const restoredKey = await cache.restoreCache([restorePath], cacheKey);
     if (restoredKey) {
@@ -81631,7 +81642,7 @@ async function main() {
     actions.setFailed('`with.cache` must be "true" or "false"');
     return;
   }
-  const zigPath = await downloadZig(os.platform(), version3, useCache === "true");
+  const zigPath = await downloadZig(os.arch(), os.platform(), version3, useCache === "true");
   actions.addPath(zigPath);
   actions.info(`zig installed at ${zigPath}`);
 }
